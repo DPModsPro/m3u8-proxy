@@ -4,18 +4,10 @@ import http from "node:http";
 import https from "node:https";
 
 export default function createServer(options) {
-  options = options || {};
-
   const httpProxyOptions = {
     xfwd: true,
     secure: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== "0",
   };
-
-  if (options.httpProxyOptions) {
-    Object.keys(options.httpProxyOptions).forEach(function (option) {
-      httpProxyOptions[option] = options.httpProxyOptions[option];
-    });
-  }
 
   const proxyServer = httpProxy.createProxyServer(httpProxyOptions);
   const requestHandler = getHandler(options, proxyServer);

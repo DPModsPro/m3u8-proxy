@@ -10,18 +10,16 @@ const web_server_url = process.env.PUBLIC_URL || `http://localhost:${port}`;
 
 export default function server() {
   createServer({
-    originBlacklist: [],
-    originWhitelist: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : ["*"],
-    requireHeader: [],
+    originWhitelist: ["*"],
     removeHeaders: [
       "cookie", "cookie2", "x-request-start", "x-request-id", "via", "connect-time", "total-route-time"
     ],
     redirectSameOrigin: true,
     httpProxyOptions: { xfwd: false },
   }).listen(port, host, function () {
-    console.log(
-      colors.green("✅ Proxy Server running on ") + colors.blue(`${web_server_url}`)
-    );
+    console.log(colors.bold.cyan("\n🚀 HYBRID PROXY ENGINE ACTIVATED"));
+    console.log(colors.green("📡 Status: ") + colors.white("Online"));
+    console.log(colors.green("🔗 Public URL: ") + colors.blue(`${web_server_url}\n`));
   });
 }
 

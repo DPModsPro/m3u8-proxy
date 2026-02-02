@@ -1,23 +1,14 @@
 import { isValidHostName } from "./isValidHostName.js";
-import { getProxyForUrl } from "proxy-from-env";
 import parseURL from "./parseURL.js";
 import proxyM3U8 from "./proxyM3U8.js";
 import { proxyTs } from "./proxyTS.js";
 import withCORS from "./withCORS.js";
 
 export default function getHandler(options, proxy) {
-  const corsAnywhere = {
-    maxRedirects: 5,
-    originBlacklist: options.originBlacklist || [],
-    originWhitelist: options.originWhitelist || [],
-    corsMaxAge: 0,
-  };
-
   return function (req, res) {
-    req.corsAnywhereRequestState = {
-      getProxyForUrl: getProxyForUrl,
-      maxRedirects: corsAnywhere.maxRedirects,
-      corsMaxAge: corsAnywhere.corsMaxAge,
+    req.corsAnywhereRequestState = { 
+      maxRedirects: 5, 
+      proxyBaseUrl: process.env.PUBLIC_URL 
     };
 
     if (req.method === "OPTIONS") {
@@ -28,28 +19,35 @@ export default function getHandler(options, proxy) {
 
     const uri = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     
-    // Custom Endpoints
+    // ROUTE 1: M3U8 Master/Media Playlist
     if (uri.pathname === "/m3u8-proxy") {
-      const url = uri.searchParams.get("url");
+      const target = uri.searchParams.get("url");
       const headers = JSON.parse(uri.searchParams.get("headers") || "{}");
-      return proxyM3U8(url || "", headers, res);
+      return proxyM3U8(target, headers, res);
     } 
     
+    // ROUTE 2: TS Segments & AES Keys
     if (uri.pathname === "/ts-proxy") {
-      const url = uri.searchParams.get("url");
+      const target = uri.searchParams.get("url");
       const headers = JSON.parse(uri.searchParams.get("headers") || "{}");
-      return proxyTs(url || "", headers, req, res);
+      return proxyTs(target, headers, req, res);
     }
 
-    // Standard Proxy Logic
-    const location = parseURL(req.url.slice(1));
-    if (!location || !isValidHostName(location.hostname)) {
-      res.writeHead(404, withCORS({}, req));
-      res.end("Invalid Target or Route");
+    // ROUTE 3: Standard CORS Proxy (For API/Images/etc)
+    const targetPath = req.url.slice(1);
+    const location = parseURL(targetPath);
+    
+    if (location && isValidHostName(location.hostname)) {
+      req.url = location.path;
+      proxy.web(req, res, { 
+        target: location, 
+        changeOrigin: true,
+        headers: { host: location.host }
+      });
       return;
     }
 
-    res.writeHead(403);
-    res.end("Generic proxying disabled. Use /m3u8-proxy");
+    res.writeHead(404, withCORS({}, req));
+    res.end("Usage: /m3u8-proxy?url=... OR /https://site.com");
   };
 }

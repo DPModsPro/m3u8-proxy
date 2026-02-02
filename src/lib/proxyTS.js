@@ -18,8 +18,11 @@ export async function proxyTs(url, headers, req, res) {
     };
 
     const proxyReq = client.request(options, (proxyRes) => {
+      // Force TS Content Type for video segments
+      if (url.includes(".ts")) res.setHeader("Content-Type", "video/mp2t");
+      
       res.writeHead(proxyRes.statusCode || 200, {
-        "Content-Type": "video/mp2t",
+        ...proxyRes.headers,
         "Access-Control-Allow-Origin": "*"
       });
       proxyRes.pipe(res);
@@ -32,6 +35,6 @@ export async function proxyTs(url, headers, req, res) {
     proxyReq.end();
   } catch (e) {
     res.writeHead(400);
-    res.end("Invalid TS URL");
+    res.end("Invalid Streaming URL");
   }
 }
